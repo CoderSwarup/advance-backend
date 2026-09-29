@@ -9,6 +9,7 @@ const server: Server = app.listen(__CONFIG__.server.port, () => {
             port: __CONFIG__.server.port,
             env: __CONFIG__.env,
             pid: process.pid,
+            url: `http://localhost:${__CONFIG__.server.port}`,
         },
     });
 });

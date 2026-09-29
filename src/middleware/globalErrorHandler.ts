@@ -9,6 +9,7 @@ export default (err: unknown, req: Request, res: Response, _next: NextFunction):
 
     logger[statusCode >= 500 ? 'error' : 'warn'](statusCode >= 500 ? 'UNHANDLED_ERROR' : 'REQUEST_ERROR', {
         meta: {
+            requestId: req.requestId,
             statusCode,
             method: req.method,
             url: req.originalUrl,

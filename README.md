@@ -18,6 +18,8 @@ centralized error handling, and observability basics built in.
 ## Features
 
 - Structured JSON logging with request/response tracing and durations
+- Request-ID correlation (`x-request-id`) across request, response, and error logs
+- Slow-request detection (`LOGGING_SLOW_REQUEST_THRESHOLD_MS`)
 - Centralized error handling (`HttpError` class → one error pipeline)
 - Typed config (`__CONFIG__`) + typed `process.env` (`env.d.ts`)
 - Health endpoint with uptime, memory, and load metrics
@@ -73,12 +75,16 @@ pnpm dev
 
 ## Environment Variables
 
-| Key         | Default           | Description                            |
-| ----------- | ----------------- | -------------------------------------- |
-| `NODE_ENV`  | `development`     | `development` \| `production`          |
-| `PORT`      | `3000`            | Server port                            |
-| `APP_NAME`  | `advance-backend` | Service name in logs                   |
-| `LOG_LEVEL` | `debug`/`info`    | `debug` \| `info` \| `warn` \| `error` |
+| Key                             | Default           | Description                                          |
+| ------------------------------- | ----------------- | ---------------------------------------------------- |
+| `NODE_ENV`                      | `development`     | `development` \| `production`                        |
+| `PORT`                          | `3000`            | Server port                                          |
+| `APP_NAME`                      | `advance-backend` | Service name in logs                                 |
+| `LOGGING_LEVEL`                 | `debug`/`info`    | `debug` \| `info` \| `warn` \| `error`               |
+| `LOGGING_FORMAT`                | `console`/`json`  | `console` (pretty) \| `json` (structured)            |
+| `LOGGING_DIRECTORY`             | `logs`            | Log file directory                                   |
+| `LOGGING_SLOW_REQUEST_THRESHOLD_MS` | `200`         | Requests slower than this are logged as `HTTP_REQUEST_SLOW` |
+| `LOGGING_RETENTION_DAYS`        | `7`               | Daily log files kept for this many days              |
 
 ## Endpoints
 
@@ -117,11 +123,16 @@ pnpm dev
 
 ## Logging
 
-- **Development:** pretty, colorized console
-- **Production:** JSON to console
-- **Files:** `logs/<env>.log` + `logs/<env>-error.log` (5 MB × 5 rotations)
+Configured via the `LOGGING_*` env vars (validated in `__CONFIG__.logging`):
 
-Log events: `HTTP_REQUEST` (method, url, status, duration),
+- **Format:** `console` → pretty colorized output (dev) · `json` → structured (production default)
+- **Files:** `logs/<env>.log` + `logs/<env>-error.log` (5 MB × 5 rotations)
+- **Daily rotation:** `logs/<env>-YYYY-MM-DD.log` + `-error.log` — new file every day, zipped when
+  rotated, kept `LOGGING_RETENTION_DAYS` (default 7) then auto-deleted
+- **Correlation:** every request gets an `x-request-id` (inbound header honored, otherwise generated UUID) — echoed in the response header and present in all log entries for that request
+- **Slow requests:** duration ≥ `LOGGING_SLOW_REQUEST_THRESHOLD_MS` → logged as `HTTP_REQUEST_SLOW` (warn)
+
+Log events: `HTTP_REQUEST` (requestId, method, url, status, duration, slow),
 `CONTROLLER_RESPONSE`, `REQUEST_ERROR` / `UNHANDLED_ERROR`, `SERVER_STARTED`,
 `SERVER_SHUTDOWN`.
 

@@ -39,9 +39,16 @@ export default <T = unknown>(
 
     logger.info('CONTROLLER_RESPONSE', {
         meta: {
+            requestId: req.requestId,
             statusCode: responseStatusCode,
             method: req.method,
             url: req.originalUrl,
+            ...(__CONFIG__.isProduction
+                ? {}
+                : {
+                      message: responseMessage,
+                      data,
+                  }),
         },
     });
 

@@ -30,6 +30,15 @@ export const healthCheck = async (req: Request, res: Response): Promise<void> =>
     try {
         const data = gatherHealthData();
 
+        logger.info('HEALTH_CHECK', {
+            meta: {
+                requestId: req.requestId,
+                status: data.status,
+                uptime: data.uptime,
+                environment: data.environment,
+            },
+        });
+
         httpResponse(req, res, 200, responseMessage.SUCCESS, data);
     } catch (error) {
         logger.error('HEALTH_CHECK_FAILED', {
