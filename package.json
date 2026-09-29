@@ -1,0 +1,55 @@
+{
+  "name": "advance-backend",
+  "version": "1.0.0",
+  "description": "Production-ready Express.js starter with structured logging, monitoring and observability basics",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "check": "pnpm typecheck && pnpm lint",
+    "build": "pnpm check && rm -rf dist && tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "logging",
+    "monitoring",
+    "observability",
+    "express",
+    "typescript"
+  ],
+  "author": "CoderSwarup",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CoderSwarup/advance-backend.git"
+  },
+  "homepage": "https://github.com/CoderSwarup/advance-backend#readme",
+  "bugs": {
+    "url": "https://github.com/CoderSwarup/advance-backend/issues"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "winston": "^3.19.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.3",
+    "eslint": "^10.11.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
