@@ -1,0 +1,36 @@
+version: '3.9'
+name: advance-backend-local
+
+services:
+  # Log aggregation backend — receives pushed logs (winston-loki)
+  loki:
+    image: grafana/loki:3.5.7
+    container_name: ${APP_NAME:-advance-backend}-loki
+    command: -config.file=/etc/loki/local-config.yml
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./loki/config.yml:/etc/loki/local-config.yml:ro
+      - loki-data:/loki
+    restart: unless-stopped
+
+  # Dashboard UI — Loki datasource pre-provisioned
+  grafana:
+    image: grafana/grafana:12.1.1
+    container_name: ${APP_NAME:-advance-backend}-grafana
+    ports:
+      - '3000:3000' # Grafana UI — app runs on 8000, no conflict
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+volumes:
+  loki-data:
+  grafana-data:

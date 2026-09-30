@@ -22,12 +22,15 @@ const resolvePositiveInt = (raw: string | undefined, fallback: number): number =
     return Number.isInteger(value) && value > 0 ? value : fallback;
 };
 
+const resolveBoolean = (raw: string | undefined, fallback: boolean): boolean =>
+    raw === 'true' ? true : raw === 'false' ? false : fallback;
+
 export const __CONFIG__ = Object.freeze({
     env,
     isProduction,
     server: Object.freeze({
         appName: process.env.APP_NAME ?? 'advance-backend',
-        port: resolvePositiveInt(process.env.PORT, 3000),
+        port: resolvePositiveInt(process.env.PORT, 8000),
     }),
     logging: Object.freeze({
         level: resolveChoice(process.env.LOGGING_LEVEL, LOG_LEVELS, isProduction ? 'info' : 'debug'),
@@ -35,6 +38,10 @@ export const __CONFIG__ = Object.freeze({
         directory: process.env.LOGGING_DIRECTORY ?? 'logs',
         slowRequestThresholdMs: resolvePositiveInt(process.env.LOGGING_SLOW_REQUEST_THRESHOLD_MS, 200),
         retentionDays: resolvePositiveInt(process.env.LOGGING_RETENTION_DAYS, 7),
+        loki: Object.freeze({
+            enabled: resolveBoolean(process.env.LOKI_ENABLED, false),
+            url: process.env.LOKI_URL ?? 'http://localhost:3100',
+        }),
     }),
 });
 

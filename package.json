@@ -10,7 +10,11 @@
     "build": "pnpm check && rm -rf dist && tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "docker:stop": "docker compose -f docker/docker-compose.yml stop"
   },
   "keywords": [
     "logging",
@@ -38,7 +42,8 @@
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston-daily-rotate-file": "^5.0.0",
+    "winston-loki": "^6.1.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -1,0 +1,82 @@
+# ============================================================================
+# GRAFANA LOKI — custom config
+# Mounted into the container as /etc/loki/local-config.yml (see docker-compose.yml)
+# Docs: https://grafana.com/docs/loki/latest/configure/
+# ============================================================================
+
+# Auth for the push/query API.
+# false = anyone reaching port 3100 can push & query (right for local dev).
+# Best practice for shared/prod: true + send X-Scope-OrgID header per tenant.
+auth_enabled: false
+
+# The HTTP API (/loki/api/v1/push, /query, /ready) listens on this port.
+# Must match the `3100:3100` port mapping in docker-compose.yml.
+server:
+  http_listen_port: 3100
+
+# "common" = settings for single-process (monolithic) Loki — the standard
+# dev/small-team setup, no cluster needed.
+#   - storage: chunks/index live on disk inside the `loki-data` Docker volume,
+#     so logs survive container restarts (`docker compose down` keeps the volume;
+#     `down -v` would wipe it).
+#   - replication_factor: 1 + in-memory ring = one instance, no gossip cluster.
+# Best practice at scale: swap `filesystem` for S3/GCS and `inmemory` ring for
+# memberlist/consul.
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks   # compressed log payloads
+      rules_directory: /loki/rules     # alerting/recording rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+# How logs are written to disk:
+#   - store tsdb + schema v13: time-partitioned index (rebuilt every 24h),
+#     fast lookups by label; object_store filesystem = chunks as files.
+# WARNING: never change `from`/`schema`/`store` on an existing volume —
+# old data would become unreadable. Add a NEW dated block instead.
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+# Background compaction/cleanup.
+# retention_enabled: actively DELETES chunks+index older than
+# limits_config.retention_period. Without this, logs grow forever and
+# eventually fill the Docker volume — set retention_period as your safety net.
+# delete_request_store: filesystem = keeps "delete log" requests on disk
+# (accepted values: filesystem, s3, gcs, azure, ... — NOT tsdb).
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+
+# Ingestion & retention limits:
+#   - retention_period: how long logs are kept (720h = 30 days).
+#   - ingestion_rate_mb / burst: backpressure if an app log-storms Loki
+#     (protects the container from OOM; defaults are 16/32, stated here
+#     so they are visible and tunable).
+limits_config:
+  retention_period: 720h
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+
+# The "ruler" evaluates alerting rules from /loki/rules and notifies via
+# Alertmanager. Harmless placeholder for local dev (no Alertmanager running);
+# point it at a real Alertmanager URL if you add Loki alert rules.
+ruler:
+  alertmanager_url: http://localhost:9093
+
+# Optional hardening: stop anonymous usage statistics being sent to
+# Grafana Labs (the baked-in default leaves this on).
+analytics:
+  reporting_enabled: false

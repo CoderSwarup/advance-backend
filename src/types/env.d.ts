@@ -9,5 +9,8 @@ declare namespace NodeJS {
         LOGGING_DIRECTORY?: string;
         LOGGING_SLOW_REQUEST_THRESHOLD_MS?: string;
         LOGGING_RETENTION_DAYS?: string;
+
+        LOKI_ENABLED?: 'true' | 'false';
+        LOKI_URL?: string;
     }
 }

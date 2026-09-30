@@ -11,7 +11,7 @@ centralized error handling, and observability basics built in.
 - **Runtime:** Node.js ≥ 20
 - **Framework:** Express 5 (ESM)
 - **Language:** TypeScript (strict, NodeNext)
-- **Logging:** Winston (console + rotating files)
+- **Logging:** Winston (console + rotating files) → Grafana Loki
 - **Package Manager:** pnpm
 - **Lint:** ESLint (typescript-eslint)
 
@@ -25,6 +25,8 @@ centralized error handling, and observability basics built in.
 - Health endpoint with uptime, memory, and load metrics
 - Graceful shutdown (SIGTERM/SIGINT) + uncaught exception handlers
 - Pre-build gate: `build` runs typecheck + lint automatically
+- Optional log shipping to Grafana Loki (`LOKI_ENABLED`) with 5s batching
+- One-command observability stack: Loki + Grafana (`pnpm docker:up`)
 - Production-safe responses: stack traces / IP stripped, non-operational errors
   masked
 
@@ -35,12 +37,17 @@ src/
 ├── config/          # __CONFIG__ (env, server, logging)
 ├── constants/       # enums + response messages (barrel: index.ts)
 ├── controllers/     # route handlers (healthCheck)
-├── middleware/       # requestLogger, notFoundHandler, globalErrorHandler
+├── middleware/      # requestLogger, notFoundHandler, globalErrorHandler
 ├── router/          # /v1 routes
+├── types/           # env.d.ts (typed process.env) + express.d.ts
 ├── utils/           # logger, httpResponse, errorObject, HttpError
 ├── app.ts           # express app (middleware chain)
-├── server.ts        # boot + shutdown handling
-└── env.d.ts         # typed process.env
+└── server.ts        # boot + shutdown handling
+
+docker/
+├── docker-compose.yml      # Loki + Grafana
+├── loki/config.yml         # custom Loki config (30-day retention)
+└── grafana/provisioning/   # auto-provisioned Loki datasource
 ```
 
 ## Getting Started
@@ -58,7 +65,7 @@ pnpm install
 # 4. Create your local environment file
 cp .env.example .env
 
-# 5. Start the dev server (hot-reload) → http://localhost:3000
+# 5. Start the dev server (hot-reload) → http://localhost:8000
 pnpm dev
 ```
 
@@ -72,19 +79,25 @@ pnpm dev
 | `pnpm start`     | Run production build              |
 | `pnpm typecheck` | `tsc --noEmit`                    |
 | `pnpm lint`      | ESLint                            |
+| `pnpm docker:up` | Start Loki + Grafana (detached)   |
+| `pnpm docker:down` | Stop + remove containers        |
+| `pnpm docker:logs` | Tail container logs             |
+| `pnpm docker:stop` | Stop containers (keep data)      |
 
 ## Environment Variables
 
 | Key                             | Default           | Description                                          |
 | ------------------------------- | ----------------- | ---------------------------------------------------- |
 | `NODE_ENV`                      | `development`     | `development` \| `production`                        |
-| `PORT`                          | `3000`            | Server port                                          |
+| `PORT`                          | `8000`            | Server port                                          |
 | `APP_NAME`                      | `advance-backend` | Service name in logs                                 |
 | `LOGGING_LEVEL`                 | `debug`/`info`    | `debug` \| `info` \| `warn` \| `error`               |
 | `LOGGING_FORMAT`                | `console`/`json`  | `console` (pretty) \| `json` (structured)            |
 | `LOGGING_DIRECTORY`             | `logs`            | Log file directory                                   |
 | `LOGGING_SLOW_REQUEST_THRESHOLD_MS` | `200`         | Requests slower than this are logged as `HTTP_REQUEST_SLOW` |
 | `LOGGING_RETENTION_DAYS`        | `7`               | Daily log files kept for this many days              |
+| `LOKI_ENABLED`                  | `false`           | Ship logs to Grafana Loki                            |
+| `LOKI_URL`                      | `http://localhost:3100` | Loki push endpoint                             |
 
 ## Endpoints
 
@@ -131,10 +144,24 @@ Configured via the `LOGGING_*` env vars (validated in `__CONFIG__.logging`):
   rotated, kept `LOGGING_RETENTION_DAYS` (default 7) then auto-deleted
 - **Correlation:** every request gets an `x-request-id` (inbound header honored, otherwise generated UUID) — echoed in the response header and present in all log entries for that request
 - **Slow requests:** duration ≥ `LOGGING_SLOW_REQUEST_THRESHOLD_MS` → logged as `HTTP_REQUEST_SLOW` (warn)
+- **Loki:** `LOKI_ENABLED=true` → batches shipped to `LOKI_URL` every 5 seconds
 
 Log events: `HTTP_REQUEST` (requestId, method, url, status, duration, slow),
 `CONTROLLER_RESPONSE`, `REQUEST_ERROR` / `UNHANDLED_ERROR`, `SERVER_STARTED`,
 `SERVER_SHUTDOWN`.
+
+## Observability Stack (Loki + Grafana)
+
+```bash
+pnpm docker:up      # start Loki (:3100) + Grafana (:3000, admin/admin)
+pnpm docker:down    # stop and remove containers
+```
+
+Set `LOKI_ENABLED=true` in `.env`, then in Grafana open **Explore → Loki** and
+query `{app="advance-backend"}` (use **Live** for real-time tailing).
+
+Config lives in `docker/loki/config.yml` (30-day retention, ingestion limits)
+and is mounted into the container; Grafana's Loki datasource is auto-provisioned.
 
 ## Request Flow
 

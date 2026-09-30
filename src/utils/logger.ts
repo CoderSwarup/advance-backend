@@ -4,6 +4,7 @@ import path from 'node:path';
 import chalk from 'chalk';
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import LokiTransport from 'winston-loki';
 import { __CONFIG__ } from '../config/config.js';
 
 const { combine, timestamp, printf, errors, json } = winston.format;
@@ -92,6 +93,22 @@ const consoleTransport = new winston.transports.Console({
     format: logging.format === 'json' ? json() : consoleFormat,
 });
 
+const createLokiTransport = (): LokiTransport =>
+    new LokiTransport({
+        host: logging.loki.url,
+        labels: { app: server.appName, env },
+        json: true,
+        level: logging.level,
+        format: json(),
+        batching: true,
+        interval: 5,
+        replaceTimestamp: true,
+
+        onConnectionError: (error: unknown) => {
+            process.stderr.write(`[loki] ${error instanceof Error ? error.message : String(error)}\n`);
+        },
+    });
+
 const logger = winston.createLogger({
     level: logging.level,
     defaultMeta: { service: server.appName, env, pid: process.pid },
@@ -113,6 +130,7 @@ const logger = winston.createLogger({
         }),
         rotateTransport(`${env}-%DATE%-error.log`, 'error'),
         rotateTransport(`${env}-%DATE%.log`),
+        ...(logging.loki.enabled ? [createLokiTransport()] : []),
     ],
 });
 
