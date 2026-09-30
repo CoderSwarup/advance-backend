@@ -1,0 +1,25 @@
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: false
+    editable: true
+    jsonData:
+      # Trace → logs: from a span, jump to the app's Loki logs in that window.
+      # mapTagNamesEnabled + mappedTags rename the span tag `service.name` to
+      # the Loki label `app`, so the generated query is {app="advance-backend"}.
+      # (v1 `tags` must be a plain string[] — objects go in `mappedTags`.)
+      tracesToLogs:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        filterByTraceID: false
+        filterBySpanID: false
+        mapTagNamesEnabled: true
+        mappedTags:
+          - key: service.name
+            value: app

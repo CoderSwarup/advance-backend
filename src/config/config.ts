@@ -46,6 +46,10 @@ export const __CONFIG__ = Object.freeze({
     monitoring: Object.freeze({
         enabled: resolveBoolean(process.env.MONITORING_ENABLED, true),
     }),
+    tracing: Object.freeze({
+        enabled: resolveBoolean(process.env.TRACING_ENABLED, false),
+        otlpUrl: process.env.TRACING_OTLP_URL ?? 'http://localhost:4318/v1/traces',
+    }),
 });
 
 export type Config = typeof __CONFIG__;

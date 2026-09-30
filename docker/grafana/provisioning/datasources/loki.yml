@@ -10,3 +10,11 @@ datasources:
     editable: true
     jsonData:
       timeInterval: 5s
+      # Log → trace: extracts trace_id from each JSON log line and links it
+      # to the matching trace in Tempo ("$$" = literal "$" in provisioning).
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '"trace_id":"([a-f0-9]{32})"'
+          name: trace_id
+          url: '$${__value.raw}'
+          urlDisplayLabel: 'View Trace'

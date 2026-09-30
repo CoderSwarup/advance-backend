@@ -30,7 +30,21 @@ services:
       - prometheus-data:/prometheus
     restart: unless-stopped
 
-  # Dashboard UI — Loki datasource pre-provisioned
+  # Tracing backend — receives OTLP spans from the app (OpenTelemetry → Tempo)
+  tempo:
+    image: grafana/tempo:2.10.8
+    container_name: ${APP_NAME:-advance-backend}-tempo
+    ports:
+      - '3200:3200' # query/ready API (Grafana datasource)
+      - '4317:4317' # OTLP gRPC
+      - '4318:4318' # OTLP HTTP ← the app's trace exporter
+    command: -config.file=/etc/tempo/config.yml
+    volumes:
+      - ./tempo/config.yml:/etc/tempo/config.yml:ro
+      - tempo-data:/var/tempo
+    restart: unless-stopped
+
+  # Dashboard UI — datasources and dashboards pre-provisioned
   grafana:
     image: grafana/grafana:12.1.1
     container_name: ${APP_NAME:-advance-backend}-grafana
@@ -40,15 +54,21 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: 'false'
+      # Serve the provisioned overview dashboard as the default home page
+      # (used when the user has no personal home-dashboard preference).
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/advance-backend-overview.json
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
       - prometheus
+      - tempo
     restart: unless-stopped
 
 volumes:
   loki-data:
   prometheus-data:
+  tempo-data:
   grafana-data:

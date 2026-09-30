@@ -1,0 +1,18 @@
+# Grafana dashboard provisioning.
+# Dashboards are files under docker/grafana/dashboards/, mounted read-only
+# into the container. Grafana re-scans the folder every 30s; allowUiUpdates is
+# false so on-screen edits can't drift from the version-controlled JSON.
+
+apiVersion: 1
+
+providers:
+  - name: Advance Backend
+    orgId: 1
+    folder: Advance Backend
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

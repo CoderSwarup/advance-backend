@@ -6,6 +6,7 @@ import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import LokiTransport from 'winston-loki';
 import { __CONFIG__ } from '../config/config.js';
+import tracing from './tracing.js';
 
 const { combine, timestamp, printf, errors, json } = winston.format;
 
@@ -54,6 +55,15 @@ const buildPayload = (raw: Record<string, unknown>): Record<string, unknown> => 
 
 const styleMessage = (level: string, text: string): string =>
     level === 'error' ? chalk.red.bold(text) : chalk.white.bold(text);
+
+const injectTraceContext = winston.format((info) => {
+    const ids = tracing.getActiveTraceIds();
+    if (ids) {
+        info.trace_id = ids.traceId;
+        info.span_id = ids.spanId;
+    }
+    return info;
+});
 
 const consoleFormat = printf(({ level, message, timestamp: time, ...raw }) => {
     const { stack, ...fields } = buildPayload(raw as Record<string, unknown>) as {
@@ -112,7 +122,7 @@ const createLokiTransport = (): LokiTransport =>
 const logger = winston.createLogger({
     level: logging.level,
     defaultMeta: { service: server.appName, env, pid: process.pid },
-    format: combine(errors({ stack: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' })),
+    format: combine(errors({ stack: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }), injectTraceContext()),
     transports: [
         consoleTransport,
         new winston.transports.File({

@@ -14,5 +14,8 @@ declare namespace NodeJS {
         LOKI_URL?: string;
 
         MONITORING_ENABLED?: 'true' | 'false';
+
+        TRACING_ENABLED?: 'true' | 'false';
+        TRACING_OTLP_URL?: string;
     }
 }

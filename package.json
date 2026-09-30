@@ -14,7 +14,8 @@
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml down",
     "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
-    "docker:stop": "docker compose -f docker/docker-compose.yml stop"
+    "docker:stop": "docker compose -f docker/docker-compose.yml stop",
+    "docker:kill": "docker compose -f docker/docker-compose.yml down -v --remove-orphans"
   },
   "keywords": [
     "logging",
@@ -38,6 +39,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.80.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-node": "^0.222.0",
     "@prometheus-io/client": "^0.16.1",
     "chalk": "^6.0.1",
     "dotenv": "^18.0.4",

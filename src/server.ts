@@ -1,4 +1,6 @@
 import type { Server } from 'node:http';
+// MUST be first: starts OpenTelemetry before Express/http are loaded
+import tracing from './utils/tracing.js';
 import app from './app.js';
 import { __CONFIG__ } from './config/config.js';
 import logger from './utils/logger.js';
@@ -17,11 +19,18 @@ const server: Server = app.listen(__CONFIG__.server.port, () => {
 const shutdown = (signal: string): void => {
     logger.info('SERVER_SHUTDOWN', { meta: { signal } });
 
-    server.close((err) => {
+    server.close(async (err) => {
         if (err) {
             logger.error('SERVER_SHUTDOWN_ERROR', { meta: { message: err.message } });
             process.exit(1);
         }
+
+        await tracing.shutdown().catch((error: unknown) => {
+            logger.error('TRACING_SHUTDOWN_ERROR', {
+                meta: { message: error instanceof Error ? error.message : String(error) },
+            });
+        });
+
         logger.info('SERVER_STOPPED');
         process.exit(0);
     });

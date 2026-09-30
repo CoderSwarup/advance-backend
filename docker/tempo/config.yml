@@ -1,0 +1,41 @@
+# ============================================================================
+# Grafana Tempo — custom config (mounted into the Tempo container)
+# Docs: https://grafana.com/docs/tempo/latest/configuration/
+# ============================================================================
+
+server:
+  # Query/ready API — must match the `3200:3200` port mapping in docker-compose.
+  http_listen_port: 3200
+
+# Where spans arrive. The app's OpenTelemetry exporter POSTs JSON traces to
+# :4318/v1/traces (OTLP/HTTP); gRPC :4317 is kept for collectors that prefer it.
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+# Flush incomplete traces into blocks every 5 minutes — keeps queries on
+# recent data fast and bounds how much data sits only in the write-ahead log.
+ingester:
+  max_block_duration: 5m
+
+# Background compaction: deletes trace blocks older than 720h (30 days —
+# Go duration syntax has no "d" unit). Matches Loki's retention.
+compactor:
+  compaction:
+    block_retention: 720h
+
+# Single-process storage on the `tempo-data` Docker volume (survives restarts):
+#   wal/     — write-ahead log (durability until blocks are flushed)
+#   traces/  — finished, compressed trace blocks
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/traces
