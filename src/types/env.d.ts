@@ -12,5 +12,7 @@ declare namespace NodeJS {
 
         LOKI_ENABLED?: 'true' | 'false';
         LOKI_URL?: string;
+
+        MONITORING_ENABLED?: 'true' | 'false';
     }
 }

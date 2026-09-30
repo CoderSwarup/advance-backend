@@ -38,6 +38,7 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@prometheus-io/client": "^0.16.1",
     "chalk": "^6.0.1",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",

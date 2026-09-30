@@ -5,6 +5,7 @@ import { responseMessage } from '../constants/index.js';
 import HttpError from '../utils/httpError.js';
 import httpResponse from '../utils/httpResponse.js';
 import logger from '../utils/logger.js';
+import monitoring from '../utils/monitoring.js';
 
 interface HealthData {
     status: 'UP' | 'DOWN';
@@ -29,6 +30,7 @@ const gatherHealthData = (): HealthData => ({
 export const healthCheck = async (req: Request, res: Response): Promise<void> => {
     try {
         const data = gatherHealthData();
+        monitoring.recordHealthCheck(data.status);
 
         logger.info('HEALTH_CHECK', {
             meta: {
@@ -41,6 +43,7 @@ export const healthCheck = async (req: Request, res: Response): Promise<void> =>
 
         httpResponse(req, res, 200, responseMessage.SUCCESS, data);
     } catch (error) {
+        monitoring.recordHealthCheck('DOWN');
         logger.error('HEALTH_CHECK_FAILED', {
             meta: {
                 message: error instanceof Error ? error.message : String(error),

@@ -43,6 +43,9 @@ export const __CONFIG__ = Object.freeze({
             url: process.env.LOKI_URL ?? 'http://localhost:3100',
         }),
     }),
+    monitoring: Object.freeze({
+        enabled: resolveBoolean(process.env.MONITORING_ENABLED, true),
+    }),
 });
 
 export type Config = typeof __CONFIG__;

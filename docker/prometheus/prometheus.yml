@@ -1,0 +1,27 @@
+# ============================================================================
+# Prometheus configuration (mounted into the container as /etc/prometheus/prometheus.yml)
+# Docs: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+# ============================================================================
+
+global:
+  # How often to sample targets when they don't define their own interval.
+  # 15s is Prometheus' recommended default — a good balance between
+  # dashboard freshness and storage/CPU cost.
+  scrape_interval: 15s
+
+  # How often to evaluate recording/alerting rules.
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus itself — self-monitoring (up, scrape durations, TSDB stats).
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # The Express app. It runs on the HOST (pnpm dev), not in this compose file,
+  # so the target is host.docker.internal (mapped via extra_hosts in compose).
+  # metrics_path defaults to /metrics.
+  - job_name: advance-backend
+    scrape_interval: 5s # app metrics are tiny — scrape fast for live dashboards
+    static_configs:
+      - targets: ['host.docker.internal:8000']

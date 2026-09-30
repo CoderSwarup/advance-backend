@@ -26,7 +26,8 @@ centralized error handling, and observability basics built in.
 - Graceful shutdown (SIGTERM/SIGINT) + uncaught exception handlers
 - Pre-build gate: `build` runs typecheck + lint automatically
 - Optional log shipping to Grafana Loki (`LOKI_ENABLED`) with 5s batching
-- One-command observability stack: Loki + Grafana (`pnpm docker:up`)
+- Prometheus metrics at `/metrics` (request rate/duration, process stats)
+- One-command observability stack: Loki + Grafana + Prometheus (`pnpm docker:up`)
 - Production-safe responses: stack traces / IP stripped, non-operational errors
   masked
 
@@ -45,9 +46,10 @@ src/
 └── server.ts        # boot + shutdown handling
 
 docker/
-├── docker-compose.yml      # Loki + Grafana
+├── docker-compose.yml      # Loki + Prometheus + Grafana
 ├── loki/config.yml         # custom Loki config (30-day retention)
-└── grafana/provisioning/   # auto-provisioned Loki datasource
+├── prometheus/prometheus.yml  # scrape config (app + prometheus itself)
+└── grafana/provisioning/   # auto-provisioned Loki + Prometheus datasources
 ```
 
 ## Getting Started
@@ -79,7 +81,7 @@ pnpm dev
 | `pnpm start`     | Run production build              |
 | `pnpm typecheck` | `tsc --noEmit`                    |
 | `pnpm lint`      | ESLint                            |
-| `pnpm docker:up` | Start Loki + Grafana (detached)   |
+| `pnpm docker:up` | Start Loki + Prometheus + Grafana  |
 | `pnpm docker:down` | Stop + remove containers        |
 | `pnpm docker:logs` | Tail container logs             |
 | `pnpm docker:stop` | Stop containers (keep data)      |
@@ -98,6 +100,7 @@ pnpm dev
 | `LOGGING_RETENTION_DAYS`        | `7`               | Daily log files kept for this many days              |
 | `LOKI_ENABLED`                  | `false`           | Ship logs to Grafana Loki                            |
 | `LOKI_URL`                      | `http://localhost:3100` | Loki push endpoint                             |
+| `MONITORING_ENABLED`            | `true`            | Expose `/metrics` + collect Prometheus metrics       |
 
 ## Endpoints
 
@@ -105,6 +108,7 @@ pnpm dev
 | ------ | ------------ | ----------------------------------- |
 | GET    | `/`          | API alive                           |
 | GET    | `/v1/health` | Health check (uptime, memory, load) |
+| GET    | `/metrics`   | Prometheus metrics (if enabled)     |
 
 **Success response**
 
@@ -150,18 +154,23 @@ Log events: `HTTP_REQUEST` (requestId, method, url, status, duration, slow),
 `CONTROLLER_RESPONSE`, `REQUEST_ERROR` / `UNHANDLED_ERROR`, `SERVER_STARTED`,
 `SERVER_SHUTDOWN`.
 
-## Observability Stack (Loki + Grafana)
+## Observability Stack (Loki + Grafana + Prometheus)
 
 ```bash
-pnpm docker:up      # start Loki (:3100) + Grafana (:3000, admin/admin)
+pnpm docker:up      # start Loki (:3100) + Prometheus (:9090) + Grafana (:3000, admin/admin)
 pnpm docker:down    # stop and remove containers
 ```
 
-Set `LOKI_ENABLED=true` in `.env`, then in Grafana open **Explore → Loki** and
+**Logs:** set `LOKI_ENABLED=true`, then in Grafana open **Explore → Loki** and
 query `{app="advance-backend"}` (use **Live** for real-time tailing).
 
-Config lives in `docker/loki/config.yml` (30-day retention, ingestion limits)
-and is mounted into the container; Grafana's Loki datasource is auto-provisioned.
+**Metrics:** Prometheus scrapes `/metrics` every 5s (see
+`docker/prometheus/prometheus.yml`); in Grafana open **Explore → Prometheus**
+and try `sum(rate(http_requests_total[5m]))` or `histogram_quantile(0.95,
+sum(rate(http_request_duration_seconds_bucket[5m])) by (le))`.
+
+Config lives in `docker/loki/config.yml` (30-day retention, ingestion limits);
+both datasources are auto-provisioned into Grafana.
 
 ## Request Flow
 

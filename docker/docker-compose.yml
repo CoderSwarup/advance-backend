@@ -14,6 +14,22 @@ services:
       - loki-data:/loki
     restart: unless-stopped
 
+  # Metrics backend — scrapes the app's /metrics (winston → Loki is logs;
+  # Prometheus is metrics)
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    container_name: ${APP_NAME:-advance-backend}-prometheus
+    ports:
+      - '9090:9090'
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d # keep 30 days of metric samples
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
   # Dashboard UI — Loki datasource pre-provisioned
   grafana:
     image: grafana/grafana:12.1.1
@@ -29,8 +45,10 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - loki
+      - prometheus
     restart: unless-stopped
 
 volumes:
   loki-data:
+  prometheus-data:
   grafana-data:
